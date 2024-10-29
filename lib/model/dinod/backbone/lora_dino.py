@@ -12,7 +12,6 @@ from lib.core import register
 __all__=['LoRA_DINOv2']
 @register
 class LoRA_DINOv2(nn.Module):
-    __share__=['DinoVisionTransformer']
     def __init__(self,
                  vit: DinoVisionTransformer,
                  feat_size: Tuple[int, int],
