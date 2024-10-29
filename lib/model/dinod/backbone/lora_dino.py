@@ -9,8 +9,10 @@ from .layers.patch_embed import PatchEmbedNoSizeCheck
 from .lora.apply import  find_all_frozen_nn_linear_names, apply_lora
 from lib.core import register
 
+__all__=['LoRA_DINOv2']
 @register
 class LoRA_DINOv2(nn.Module):
+    __share__=['DinoVisionTransformer']
     def __init__(self,
                  vit: DinoVisionTransformer,
                  feat_size: Tuple[int, int],
