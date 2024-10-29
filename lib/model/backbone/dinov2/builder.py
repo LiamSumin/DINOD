@@ -1,5 +1,5 @@
 import torch
-import ccopy
+import copy
 
 _default_config = {
 'block_chunks': 0,
