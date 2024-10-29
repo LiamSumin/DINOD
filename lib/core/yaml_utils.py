@@ -67,7 +67,6 @@ def create(type_or_name, **kwargs):
     '''
     '''
     assert type(type_or_name) in (type, str), 'create should be class or name.'
-    import pdb; pdb.set_trace()
     name = type_or_name if isinstance(type_or_name, str) else type_or_name.__name__
 
     if name in GLOBAL_CONFIG:

@@ -5,12 +5,17 @@ criterion: SetCriterion
 postprocessor: RTDETRPostProcessor
 
 DINOD:
-  backbone: DINOv2
+  backbone: DinoVisionTransformer
   encoder: HybridEncoder
   decoder: RTDETRTransformer
-  multi_scale: [480, 512, 544, 576, 608, 640, 640, 640, 672, 704, 736, 768, 800]
+  feat_size: 518
+  lora_r: 64
+  alpha: 64
+  dropout: 0.
+  use_rslora: False
+  multi_scale: [ 480, 512, 544, 576, 608, 640, 640, 640, 672, 704, 736, 768, 800 ]
 
-DINOv2:
+DinoVisionTransformer:
   size: s
   pretrained: True
   block_chunks: 0
@@ -19,12 +24,12 @@ DINOv2:
   img_size: 518
 
 HybridEncoder:
-  in_channels: [128, 256, 512]
-  feat_strides: [8, 16, 32]
+  in_channels: [ 128, 256, 512 ]
+  feat_strides: [ 8, 16, 32 ]
 
   # intra
   hidden_dim: 256
-  use_encoder_idx: [2]
+  use_encoder_idx: [ 2 ]
   num_encoder_layers: 1
   nhead: 8
   dim_feedforward: 1024
@@ -38,11 +43,11 @@ HybridEncoder:
   act: 'silu'
 
   # eval
-  eval_spatial_size: [518, 518]
+  eval_spatial_size: [ 518, 518 ]
 
 RTDETRTransformer:
-  feat_channels: [256, 256, 256]
-  feat_strides: [8, 16, 32]
+  feat_channels: [ 256, 256, 256 ]
+  feat_strides: [ 8, 16, 32 ]
   hidden_dim: 256
   num_levels: 3
 
@@ -52,7 +57,7 @@ RTDETRTransformer:
   num_denoising: 100
 
   eval_idx: -1
-  eval_spatial_size: [518, 518]
+  eval_spatial_size: [ 518, 518 ]
 
 use_focal_loss: True
 
@@ -60,6 +65,6 @@ RTDETRPostProcessor:
   num_top_queries: 300
 
 SetCriterion:
-  weight_dict: {loss_vfl: 1, cost_bbox: 5, cost_giou: 2}
+  weight_dict: { loss_vfl: 1, cost_bbox: 5, cost_giou: 2 }
   alpha: 0.25
   gamma: 2.0
