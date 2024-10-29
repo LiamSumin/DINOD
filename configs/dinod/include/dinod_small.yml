@@ -8,11 +8,6 @@ DINOD:
   backbone: LoRA_DINOv2
   encoder: HybridEncoder
   decoder: RTDETRTransformer
-  feat_size: 518
-  lora_r: 64
-  alpha: 64
-  dropout: 0.
-  use_rslora: False
   multi_scale: [ 480, 512, 544, 576, 608, 640, 640, 640, 672, 704, 736, 768, 800 ]
 
 LoRA_DINOv2:

@@ -12,7 +12,7 @@ train_dataloader:
         # - {type: Resize, size: 639, max_size: 640}
         # - {type: PadToSize, spatial_size: 640}
         - { type: ToImage }
-        - { type: ConvertDtype }
+        - { type: ConvertImageDtype }
         - { type: SanitizeBoundingBoxes, min_size: 1 }
         - { type: ConvertImageDtype, out_fmt: 'cxcywh', normalize: True }
   shuffle: True
