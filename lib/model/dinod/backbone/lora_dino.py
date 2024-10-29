@@ -21,6 +21,7 @@ class LoRA_DINOv2(nn.Module):
                  use_rslora:bool = False
                  ):
         super().__init__()
+        vit = DinoVisionTransformer
         self.feat_size = feat_size
         self.patch_embed = PatchEmbedNoSizeCheck.build(vit.patch_embed)
         self.blocks = vit.blocks
