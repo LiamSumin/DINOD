@@ -45,6 +45,7 @@ def extract_schema(cls: type):
     schame['_pymodule'] = importlib.import_module(cls.__module__)
     schame['_inject'] = getattr(cls, '__inject__', [])
     schame['_share'] = getattr(cls, '__share__', [])
+    print(schame)
 
     for i, name in enumerate(arg_names):
         if name in schame['_share']:
@@ -66,7 +67,7 @@ def create(type_or_name, **kwargs):
     '''
     '''
     assert type(type_or_name) in (type, str), 'create should be class or name.'
-
+    import pdb; pdb.set_trace()
     name = type_or_name if isinstance(type_or_name, str) else type_or_name.__name__
 
     if name in GLOBAL_CONFIG:
@@ -77,6 +78,7 @@ def create(type_or_name, **kwargs):
 
     cfg = GLOBAL_CONFIG[name]
 
+
     if isinstance(cfg, dict) and 'type' in cfg:
         _cfg: dict = GLOBAL_CONFIG[cfg['type']]
         _cfg.update(cfg)  # update global cls default args
@@ -84,6 +86,7 @@ def create(type_or_name, **kwargs):
         name = _cfg.pop('type')
 
         return create(name)
+
 
     cls = getattr(cfg['_pymodule'], name)
     argspec = inspect.getfullargspec(cls.__init__)

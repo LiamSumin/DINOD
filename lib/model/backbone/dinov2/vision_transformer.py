@@ -40,7 +40,6 @@ class BlockChunk(nn.ModuleList):
             x = b(x)
         return x
 
-
 class DinoVisionTransformer(nn.Module):
     def __init__(
         self,

@@ -36,7 +36,7 @@ def main(args, ) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', '-c', type=str, )
+    parser.add_argument('--config', '-c', type=str, default="../configs/dinod/dinod.yml" )
     parser.add_argument('--resume', '-r', type=str, )
     parser.add_argument('--tuning', '-t', type=str, )
     parser.add_argument('--test-only', action='store_true', default=False, )

@@ -1,50 +1,33 @@
 from typing import Tuple,List,Optional,Mapping,Any
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 from collections import OrderedDict
 from timm.models.layers import trunc_normal_
 from lib.model.backbone.dinov2.vision_transformer import  DinoVisionTransformer
 from lib.model.backbone.dinov2.positional_encoding import  interpolate_pos_encoding
-from .backbone.layers.patch_embed import PatchEmbedNoSizeCheck
-from .backbone.lora.apply import  find_all_frozen_nn_linear_names, apply_lora
+from .layers.patch_embed import PatchEmbedNoSizeCheck
+from .lora.apply import  find_all_frozen_nn_linear_names, apply_lora
 
-import numpy as np
-
-from lib.core import register
-
-__all__ = ['DINOD',]
-
-@register
-class DINOD(nn.Module):
-    __inject__ = ['backbone', 'encoder', 'decoder']
-
+class LoRA_DINOv2(nn.Module):
     def __init__(self,
-                 backbone: DinoVisionTransformer,
-                 encoder,
-                 decoder,
-                 feat_size:Tuple[int,int],
+                 vit: DinoVisionTransformer,
+                 feat_size: Tuple[int, int],
                  lora_r: int,
-                 lora_alpha:float,
+                 lora_alpha: float,
                  lora_dropout: float,
-                 use_rslora:bool = False,
-                 multi_scale=None
+                 use_rslora:bool = False
                  ):
         super().__init__()
-        self.backbone = backbone
-        self.encoder = encoder
-        self.decoder = decoder
-        self.multi_scale = multi_scale
         self.feat_size = feat_size
-        self.patch_embed = PatchEmbedNoSizeCheck.build(backbone.patch_embed)
-        self.blocks = backbone.blocks
-        self.norm = backbone.norm
-        self.embed_dim = backbone.embed_dim
+        self.patch_embed = PatchEmbedNoSizeCheck.build(vit.patch_embed)
+        self.blocks = vit.blocks
+        self.norm = vit.norm
+        self.embed_dim = vit.embed_dim
 
-        self.pos_embed = nn.Parameter(torch.empty(1, feat_size[0] * feat_size[1], self.embed_dim))
-        self.pos_embed.data.copy_(interpolate_pos_encoding(backbone.pos_embed.data[:, 1:, :],
+        self.pos_embed = nn.Parameter(torch.empty(1, feat_size[0]*feat_size[1], self.embed_dim))
+        self.pos_embed.data.copy_(interpolate_pos_encoding(vit.pos_embed.data[:, 1:, :],
                                                            self.feat_size,
-                                                           backbone.patch_embed.patches_resolution,
+                                                           vit.patch_embed.patches_resolution,
                                                            num_prefix_tokens=0, interpolate_offset=0))
         self.lora_alpha = lora_alpha
         self.use_rslora = use_rslora
@@ -64,25 +47,12 @@ class DINOD(nn.Module):
         x = x + self.pos_embed
         x = x + self.token_type_embed[2].view(1, 1, self.embed_dim)
         return x
-    def forward(self, x, targets=None):
-        if self.multi_scale and self.training:
-            sz = np.random.choice(self.multi_scale)
-            x = F.interpolate(x, size=[sz, sz])
-
+    def forward(self, x: torch.Tensor):
         x = self._x_feat(x)
         for i in range(len(self.blocks)):
             x = self.blocks[i](x)
         x = self.norm(x)
-        x = self.encoder(x)
-        x = self.decoder(x, targets)
         return x
-
-    def deploy(self, ):
-        self.eval()
-        for m in self.modules():
-            if hasattr(m, 'convert_to_deploy'):
-                m.convert_to_deploy()
-        return self
 
     def state_dict(self, **kwargs):
         state_dict = super().state_dict(**kwargs)
