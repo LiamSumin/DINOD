@@ -22,7 +22,12 @@ LoRA_DINOv2:
   init_values: 1.0e-05
   drop_path_uniform: True
   img_size: 518
-
+  feat_size: 518
+  lora_r: 64
+  lora_alpha: 64
+  lora_dropout: 0.
+  use_rslora: False
+  
 HybridEncoder:
   in_channels: [ 128, 256, 512 ]
   feat_strides: [ 8, 16, 32 ]

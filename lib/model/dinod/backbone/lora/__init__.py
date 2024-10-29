@@ -48,7 +48,6 @@ class LoRALayer(nn.Module):
             self.scaling = alpha / math.sqrt(r)
         else:
             self.scaling = alpha / r
-
         self.dropout = nn.Dropout(dropout) if dropout > 0 else nn.Identity()
 
         if init_method == 'lora':

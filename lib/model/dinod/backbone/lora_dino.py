@@ -8,7 +8,7 @@ from lib.model.backbone.dinov2.positional_encoding import  interpolate_pos_encod
 from .layers.patch_embed import PatchEmbedNoSizeCheck
 from .lora.apply import  find_all_frozen_nn_linear_names, apply_lora
 from lib.core import register
-
+from timm.layers import to_2tuple
 __all__=['LoRA_DINOv2']
 @register
 class LoRA_DINOv2(nn.Module):
@@ -21,21 +21,22 @@ class LoRA_DINOv2(nn.Module):
                  use_rslora:bool = False
                  ):
         super().__init__()
-        vit = DinoVisionTransformer
-        self.feat_size = feat_size
+        vit = DinoVisionTransformer()
+    
+        self.feat_size = to_2tuple(feat_size)
         self.patch_embed = PatchEmbedNoSizeCheck.build(vit.patch_embed)
         self.blocks = vit.blocks
         self.norm = vit.norm
         self.embed_dim = vit.embed_dim
 
-        self.pos_embed = nn.Parameter(torch.empty(1, feat_size[0]*feat_size[1], self.embed_dim))
+        self.pos_embed = nn.Parameter(torch.empty(1, self.feat_size[0]*self.feat_size[1], self.embed_dim))
         self.pos_embed.data.copy_(interpolate_pos_encoding(vit.pos_embed.data[:, 1:, :],
                                                            self.feat_size,
                                                            vit.patch_embed.patches_resolution,
                                                            num_prefix_tokens=0, interpolate_offset=0))
         self.lora_alpha = lora_alpha
         self.use_rslora = use_rslora
-
+        self.lora_dropout = lora_dropout
         for param in self.parameters():
             param.requires_grad = False
 
