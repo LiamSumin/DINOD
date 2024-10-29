@@ -7,7 +7,9 @@ from lib.model.backbone.dinov2.vision_transformer import  DinoVisionTransformer
 from lib.model.backbone.dinov2.positional_encoding import  interpolate_pos_encoding
 from .layers.patch_embed import PatchEmbedNoSizeCheck
 from .lora.apply import  find_all_frozen_nn_linear_names, apply_lora
+from lib.core import register
 
+@register
 class LoRA_DINOv2(nn.Module):
     def __init__(self,
                  vit: DinoVisionTransformer,

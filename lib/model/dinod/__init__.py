@@ -1,4 +1,5 @@
 from .dinod import *
+from .backbone.lora_dino import  *
 from .encoder.hybrid_encoder import *
 from .decoder.rtdetr_decoder import *
 from .postprocessing.rtdetr_postprocessor import  *

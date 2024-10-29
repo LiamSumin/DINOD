@@ -5,7 +5,7 @@ criterion: SetCriterion
 postprocessor: RTDETRPostProcessor
 
 DINOD:
-  backbone: DinoVisionTransformer
+  backbone: LoRA_DINOv2
   encoder: HybridEncoder
   decoder: RTDETRTransformer
   feat_size: 518
@@ -15,7 +15,7 @@ DINOD:
   use_rslora: False
   multi_scale: [ 480, 512, 544, 576, 608, 640, 640, 640, 672, 704, 736, 768, 800 ]
 
-DinoVisionTransformer:
+LoRA_DINOv2:
   size: s
   pretrained: True
   block_chunks: 0
