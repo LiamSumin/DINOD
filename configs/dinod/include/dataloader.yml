@@ -13,7 +13,7 @@ train_dataloader:
         # - {type: PadToSize, spatial_size: 640}
         - { type: ToImage }
         - { type: SanitizeBoundingBoxes, min_size: 1 }
-        - { type: ConvertImageDtype, out_fmt: 'cxcywh', normalize: True }
+        - { type: ConvertBox, out_fmt: 'cxcywh', normalize: True }
   shuffle: True
   batch_size: 8
   num_workers: 4
