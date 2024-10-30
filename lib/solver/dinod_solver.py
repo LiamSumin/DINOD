@@ -25,6 +25,8 @@ class DinodSolver(BaseSolver):
         best_stat = {'epoch': -1, }
 
         start_time = time.time()
+        import pdb; pdb.set_trace()
+
         for epoch in range(self.last_epoch + 1, args.epoches):
             if dist.is_dist_available_and_initialized():
                 self.train_dataloader.sampler.set_epoch(epoch)

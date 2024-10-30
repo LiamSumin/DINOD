@@ -45,7 +45,6 @@ def extract_schema(cls: type):
     schame['_pymodule'] = importlib.import_module(cls.__module__)
     schame['_inject'] = getattr(cls, '__inject__', [])
     schame['_share'] = getattr(cls, '__share__', [])
-    print(schame)
 
     for i, name in enumerate(arg_names):
         if name in schame['_share']:
