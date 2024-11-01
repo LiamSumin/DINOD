@@ -3,17 +3,30 @@ import torch
 import torch.nn as nn
 from collections import OrderedDict
 from timm.models.layers import trunc_normal_
-from lib.model.backbone.dinov2.vision_transformer import  DinoVisionTransformer
+from lib.model.backbone.dinov2.vision_transformer import  vit_small, vit_base, vit_large
 from lib.model.backbone.dinov2.positional_encoding import  interpolate_pos_encoding
 from .layers.patch_embed import PatchEmbedNoSizeCheck
 from .lora.apply import  find_all_frozen_nn_linear_names, apply_lora
 from lib.core import register
 from timm.layers import to_2tuple
+import os
+import copy
+
 __all__=['LoRA_DINOv2']
+_default_config = {
+    'block_chunks': 0,
+    'init_values': 1.0e-05,
+    'drop_path_uniform': True,
+    'img_size': 518
+}
+config = copy.deepcopy(_default_config)
 @register
 class LoRA_DINOv2(nn.Module):
     def __init__(self,
-                 vit: DinoVisionTransformer,
+                 model,
+                 patch_size: int,
+                 pretrained: bool,
+                 pretrained_path: str,
                  feat_size: Tuple[int, int],
                  lora_r: int,
                  lora_alpha: float,
@@ -21,7 +34,15 @@ class LoRA_DINOv2(nn.Module):
                  use_rslora:bool = False
                  ):
         super().__init__()
-        vit = DinoVisionTransformer()
+
+        if model == 's':
+            vit = vit_small(patch_size, **config)
+        elif model == 'b':
+            vit = vit_base(patch_size, **config)
+        elif model == 'l':
+            vit = vit_large(patch_size, **config)
+        if pretrained:
+            vit.load_state_dict(torch.load(os.path.join(pretrained_path, f"dinov2_vit{model}14_pretrain.pth"), weights_only=True))
     
         self.feat_size = to_2tuple(feat_size)
         self.patch_embed = PatchEmbedNoSizeCheck.build(vit.patch_embed)

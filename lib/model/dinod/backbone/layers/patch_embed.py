@@ -4,6 +4,7 @@ from torch import Tensor
 import torch.nn as nn
 from lib.model.backbone.dinov2.layers.patch_embed import PatchEmbed
 from timm.layers import to_2tuple
+
 class PatchEmbedNoSizeCheck(nn.Module):
     def __init__(self,
                  in_chans: int = 3,

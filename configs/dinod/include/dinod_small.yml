@@ -11,8 +11,10 @@ DINOD:
   multi_scale: [ 480, 512, 544, 576, 608, 640, 640, 640, 672, 704, 736, 768, 800 ]
 
 LoRA_DINOv2:
-  size: s
+  model: s
   pretrained: True
+  patch_size: 14
+  pretrained_path: pretrained
   block_chunks: 0
   init_values: 1.0e-05
   drop_path_uniform: True

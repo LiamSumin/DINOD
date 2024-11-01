@@ -18,17 +18,17 @@ __all__ = ['DINOD', ]
 
 @register
 class DINOD(nn.Module):
-    __inject__ = ['backbone', 'encoder', 'decoder']
-
+    #__inject__ = ['backbone', 'encoder', 'decoder']
+    __inject__ = ['backbone', 'decoder']
     def __init__(self,
                  backbone,
-                 encoder,
+                 #encoder,
                  decoder,
                  multi_scale=None
                  ):
         super().__init__()
         self.backbone = backbone
-        self.encoder = encoder
+        #self.encoder = encoder
         self.decoder = decoder
         self.multi_scale = multi_scale
 
@@ -37,7 +37,7 @@ class DINOD(nn.Module):
             sz = np.random.choice(self.multi_scale)
             x = F.interpolate(x, size=[sz, sz])
         x = self.backbone(x)
-        x = self.encoder(x)
+        #x = self.encoder(x)
         x = self.decoder(x, targets)
         return x
 
