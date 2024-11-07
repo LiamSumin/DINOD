@@ -16,7 +16,6 @@ from .box_ops import box_cxcywh_to_xyxy, box_iou, generalized_box_iou
 from lib.utils.misc.dist import get_world_size, is_dist_available_and_initialized
 from lib.core import register
 
-
 @register
 class SetCriterion(nn.Module):
     """ This class computes the loss for DETR.

@@ -12,7 +12,7 @@ from lib.model.dinod.utils import deformable_attention_core_func, get_activation
 from lib.model.dinod.utils import bias_init_with_prob
 
 from lib.core import register
-
+from timm.layers import to_2tuple
 __all__ = ['RTDETRTransformer']
 
 
@@ -125,7 +125,6 @@ class MSDeformableAttention(nn.Module):
             raise ValueError(
                 "Last dim of reference_points must be 2 or 4, but get {} instead.".
                 format(reference_points.shape[-1]))
-
         output = self.ms_deformable_attn_core(value, value_spatial_shapes, sampling_locations, attention_weights)
 
         output = self.output_proj(output)
@@ -239,7 +238,6 @@ class TransformerDecoder(nn.Module):
         dec_out_bboxes = []
         dec_out_logits = []
         ref_points_detach = F.sigmoid(ref_points_unact)
-
         for i, layer in enumerate(self.layers):
             ref_points_input = ref_points_detach.unsqueeze(2)
             query_pos_embed = query_pos_head(ref_points_detach)
@@ -275,7 +273,7 @@ class RTDETRTransformer(nn.Module):
 
     def __init__(self,
                  num_classes=80,
-                 hidden_dim=256,
+                 hidden_dim=384,
                  num_queries=300,
                  position_embed_type='sine',
                  feat_channels=[512, 1024, 2048],
@@ -317,7 +315,6 @@ class RTDETRTransformer(nn.Module):
 
         # backbone feature projection
         self._build_input_proj_layer(feat_channels)
-
         # Transformer module
         decoder_layer = TransformerDecoderLayer(hidden_dim, nhead, dim_feedforward, dropout, activation, num_levels,
                                                 num_decoder_points)
@@ -402,32 +399,16 @@ class RTDETRTransformer(nn.Module):
             in_channels = self.hidden_dim
 
     def _get_encoder_input(self, feats):
-        # get projection features
-        proj_feats = [self.input_proj[i](feat) for i, feat in enumerate(feats)]
-        if self.num_levels > len(proj_feats):
-            len_srcs = len(proj_feats)
-            for i in range(len_srcs, self.num_levels):
-                if i == len_srcs:
-                    proj_feats.append(self.input_proj[i](feats[-1]))
-                else:
-                    proj_feats.append(self.input_proj[i](proj_feats[-1]))
-
         # get encoder inputs
         feat_flatten = []
         spatial_shapes = []
         level_start_index = [0, ]
-        for i, feat in enumerate(proj_feats):
-            _, _, h, w = feat.shape
-            # [b, c, h, w] -> [b, h*w, c]
-            feat_flatten.append(feat.flatten(2).permute(0, 2, 1))
-            # [num_levels, 2]
-            spatial_shapes.append([h, w])
-            # [l], start index of each level
-            level_start_index.append(h * w + level_start_index[-1])
+        h, w = to_2tuple(int(math.sqrt(feats.shape[1])))
+        # [b, c, h, w] -> [b, h*w, c]
+        spatial_shapes = [h, w]
 
-        # [b, l, c]
-        feat_flatten = torch.concat(feat_flatten, 1)
-        level_start_index.pop()
+        level_start_index= [h * w + level_start_index[-1]]
+        feat_flatten = feats
         return (feat_flatten, spatial_shapes, level_start_index)
 
     def _generate_anchors(self,
@@ -437,13 +418,10 @@ class RTDETRTransformer(nn.Module):
                           device='cpu'):
         if spatial_shapes is None:
             spatial_shapes = [[int(self.eval_spatial_size[0] / s), int(self.eval_spatial_size[1] / s)]
-                              for s in self.feat_strides
-                              ]
+                              for s in self.feat_strides]
         anchors = []
         for lvl, (h, w) in enumerate(spatial_shapes):
-            grid_y, grid_x = torch.meshgrid( \
-                torch.arange(end=h, dtype=dtype), \
-                torch.arange(end=w, dtype=dtype), indexing='ij')
+            grid_y, grid_x = torch.meshgrid( torch.arange(end=h, dtype=dtype), torch.arange(end=w, dtype=dtype), indexing='ij')
             grid_xy = torch.stack([grid_x, grid_y], -1)
             valid_WH = torch.tensor([w, h]).to(dtype)
             grid_xy = (grid_xy.unsqueeze(0) + 0.5) / valid_WH
@@ -470,7 +448,6 @@ class RTDETRTransformer(nn.Module):
             anchors, valid_mask = self._generate_anchors(spatial_shapes, device=memory.device)
         else:
             anchors, valid_mask = self.anchors.to(memory.device), self.valid_mask.to(memory.device)
-
         # memory = torch.where(valid_mask, memory, 0)
         memory = valid_mask.to(memory.dtype) * memory  # TODO fix type error for onnx export
 
@@ -525,16 +502,15 @@ class RTDETRTransformer(nn.Module):
                                                          box_noise_scale=self.box_noise_scale, )
         else:
             denoising_class, denoising_bbox_unact, attn_mask, dn_meta = None, None, None, None
-
         target, init_ref_points_unact, enc_topk_bboxes, enc_topk_logits = \
-            self._get_decoder_input(memory, spatial_shapes, denoising_class, denoising_bbox_unact)
+            self._get_decoder_input(memory, [spatial_shapes], denoising_class, denoising_bbox_unact)
 
         # decoder
         out_bboxes, out_logits = self.decoder(
             target,
             init_ref_points_unact,
             memory,
-            spatial_shapes,
+            [spatial_shapes],
             level_start_index,
             self.dec_bbox_head,
             self.dec_score_head,

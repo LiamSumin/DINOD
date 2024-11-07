@@ -45,14 +45,16 @@ class LoRA_DINOv2(nn.Module):
             vit.load_state_dict(torch.load(os.path.join(pretrained_path, f"dinov2_vit{model}14_pretrain.pth"), weights_only=True))
     
         self.feat_size = to_2tuple(feat_size)
+        self.patch_size = to_2tuple(patch_size)
         self.patch_embed = PatchEmbedNoSizeCheck.build(vit.patch_embed)
         self.blocks = vit.blocks
         self.norm = vit.norm
         self.embed_dim = vit.embed_dim
+        self.patch_cnt = [int(self.feat_size[0]/self.patch_size[0]), int(self.feat_size[1]/self.patch_size[1])]
 
-        self.pos_embed = nn.Parameter(torch.empty(1, self.feat_size[0]*self.feat_size[1], self.embed_dim))
+        self.pos_embed = nn.Parameter(torch.empty(1, self.patch_cnt[0]*self.patch_cnt[1], self.embed_dim))
         self.pos_embed.data.copy_(interpolate_pos_encoding(vit.pos_embed.data[:, 1:, :],
-                                                           self.feat_size,
+                                                           self.patch_cnt,
                                                            vit.patch_embed.patches_resolution,
                                                            num_prefix_tokens=0, interpolate_offset=0))
         self.lora_alpha = lora_alpha
@@ -63,7 +65,6 @@ class LoRA_DINOv2(nn.Module):
 
         self.token_type_embed = nn.Parameter(torch.empty(3, self.embed_dim))
         trunc_normal_(self.token_type_embed, std=.02)
-
         for i_layer, block in enumerate(self.blocks):
             linear_names = find_all_frozen_nn_linear_names(block)
             apply_lora(block, linear_names, lora_r, lora_alpha, lora_dropout, use_rslora)

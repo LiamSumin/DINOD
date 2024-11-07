@@ -1,4 +1,5 @@
 import torch
+import torch.nn as nn
 
 from datetime import datetime
 from pathlib import Path
@@ -19,6 +20,7 @@ class BaseSolver(object):
         device = cfg.device
         self.device =device
         self.last_epoch = cfg.last_epoch
+
         self.model = dist.warp_model(cfg.model.to(device), cfg.find_unused_parameters, cfg.sync_bn)
         self.criterion = cfg.criterion.to(device)
         self.postprocessor = cfg.postprocessor

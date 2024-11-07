@@ -23,7 +23,6 @@ def deformable_attention_core_func(value, value_spatial_shapes, sampling_locatio
     """
     bs, _, n_head, c = value.shape
     _, Len_q, _, n_levels, n_points, _ = sampling_locations.shape
-
     split_shape = [h * w for h, w in value_spatial_shapes]
     value_list = value.split(split_shape, dim=1)
     sampling_grids = 2 * sampling_locations - 1

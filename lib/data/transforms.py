@@ -26,6 +26,7 @@ RandomZoomOut = register(T.RandomZoomOut)
 RandomHorizontalFlip = register(T.RandomHorizontalFlip)
 Resize = register(T.Resize)
 ToImageTensor = register(T.ToImage)
+ConvertImageDtype=register(T.ConvertImageDtype)
 SanitizeBoundingBox = register(T.SanitizeBoundingBoxes)
 RandomCrop = register(T.RandomCrop)
 Normalize = register(T.Normalize)
@@ -131,12 +132,12 @@ class ConvertBox(T.Transform):
 
     def _transform(self, inpt: Any, params: Dict[str, Any]) -> Any:
         if self.out_fmt:
-            spatial_size = inpt.spatial_size
+            spatial_size = inpt.canvas_size
             in_fmt = inpt.format.value.lower()
             inpt = torchvision.ops.box_convert(inpt, in_fmt=in_fmt, out_fmt=self.out_fmt)
             inpt = tv_tensors.BoundingBoxes(inpt, format=self.data_fmt[self.out_fmt], canvas_size=spatial_size)
 
         if self.normalize:
-            inpt = inpt / torch.tensor(inpt.spatial_size[::-1]).tile(2)[None]
+            inpt = inpt / torch.tensor(inpt.canvas_size[::-1]).tile(2)[None]
 
         return inpt

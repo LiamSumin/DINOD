@@ -30,7 +30,7 @@ HybridEncoder:
   feat_strides: [ 8, 16, 32 ]
 
   # intra
-  hidden_dim: 256
+  hidden_dim: 384
   use_encoder_idx: [ 2 ]
   num_encoder_layers: 1
   nhead: 8
@@ -48,10 +48,10 @@ HybridEncoder:
   eval_spatial_size: [ 518, 518 ]
 
 RTDETRTransformer:
-  feat_channels: [ 256, 256, 256 ]
-  feat_strides: [ 8, 16, 32 ]
-  hidden_dim: 256
-  num_levels: 3
+  feat_channels: [ 384 ]
+  feat_strides: [ 8 ]
+  hidden_dim: 384
+  num_levels: 1
 
   num_queries: 300
 
@@ -67,6 +67,14 @@ RTDETRPostProcessor:
   num_top_queries: 300
 
 SetCriterion:
-  weight_dict: { loss_vfl: 1, cost_bbox: 5, cost_giou: 2 }
-  alpha: 0.25
+  weight_dict: {loss_vfl: 1, loss_bbox: 5, loss_giou: 2,}
+  losses: ['vfl', 'boxes', ]
+  alpha: 0.75
   gamma: 2.0
+
+  matcher:
+    type: HungarianMatcher
+    weight_dict: {cost_class: 2, cost_bbox: 5, cost_giou: 2}
+    # use_focal_loss: True
+    alpha: 0.25
+    gamma: 2.0
