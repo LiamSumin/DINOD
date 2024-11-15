@@ -11,6 +11,7 @@ def get_contrastive_denoising_training_group(targets,
                                              num_denoising=100,
                                              label_noise_ratio=0.5,
                                              box_noise_scale=1.0, ):
+
     """cnd"""
     if num_denoising <= 0:
         return None, None, None, None
@@ -70,9 +71,11 @@ def get_contrastive_denoising_training_group(targets,
         input_query_bbox = box_xyxy_to_cxcywh(known_bbox)
         input_query_bbox = inverse_sigmoid(input_query_bbox)
 
+
     input_query_class = class_embed(input_query_class)
 
     tgt_size = num_denoising + num_queries
+
     # attn_mask = torch.ones([tgt_size, tgt_size], device=device) < 0
     attn_mask = torch.full([tgt_size, tgt_size], False, dtype=torch.bool, device=device)
     # match query cannot see the reconstruction

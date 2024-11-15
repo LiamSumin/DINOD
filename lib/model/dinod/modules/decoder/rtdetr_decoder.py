@@ -483,6 +483,7 @@ class RTDETRTransformer(nn.Module):
         # input projection and embedding
         (memory, spatial_shapes, level_start_index) = self._get_encoder_input(feats)
 
+
         # prepare denoising training
         if self.training and self.num_denoising > 0:
             denoising_class, denoising_bbox_unact, attn_mask, dn_meta = \
@@ -534,5 +535,3 @@ class RTDETRTransformer(nn.Module):
         return [{'pred_logits': a, 'pred_boxes': b}
                 for a, b in zip(outputs_class, outputs_coord)]
 
-def build_RTDETR_DECODER(**kwargs):
-    return RTDETRTransformer(**kwargs)

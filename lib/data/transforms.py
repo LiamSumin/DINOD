@@ -2,6 +2,7 @@
 """
 
 import torch
+from torch._prims_common import clone_preserve_strides
 import torch.nn as nn
 
 import torchvision
@@ -16,19 +17,72 @@ import torchvision.transforms.v2.functional as F
 from PIL import Image
 from typing import Any, Dict, List, Optional
 
-from lib.core import register, GLOBAL_CONFIG
 
-__all__ = ['Compose', ]
+class RandomIoUCrop(T.RandomIoUCrop):
+    def __init__(self, min_scale: float = 0.3, max_scale: float = 1, min_aspect_ratio: float = 0.5,
+                 max_aspect_ratio: float = 2, sampler_options: Optional[List[float]] = None, trials: int = 40,
+                 p: float = 1.0):
+        super().__init__(min_scale, max_scale, min_aspect_ratio, max_aspect_ratio, sampler_options, trials)
+        self.p = p
+
+    def __call__(self, *inputs: Any) -> Any:
+        if torch.rand(1) >= self.p:
+            return inputs if len(inputs) > 1 else inputs[0]
+
+        return super().forward(*inputs)
+
+class ConvertBox(T.Transform):
+    _transformed_types = (
+        tv_tensors.BoundingBoxes,
+    )
+
+    def __init__(self, out_fmt='', normalize=False) -> None:
+        super().__init__()
+        self.out_fmt = out_fmt
+        self.normalize = normalize
+
+        self.data_fmt = {
+            'xyxy': tv_tensors.BoundingBoxFormat.XYXY,
+            'cxcywh': tv_tensors.BoundingBoxFormat.CXCYWH
+        }
+
+    def _transform(self, inpt: Any, params: Dict[str, Any]) -> Any:
+        if self.out_fmt:
+            spatial_size = inpt.canvas_size
+            in_fmt = inpt.format.value.lower()
+            inpt = torchvision.ops.box_convert(inpt, in_fmt=in_fmt, out_fmt=self.out_fmt)
+            inpt = tv_tensors.BoundingBoxes(inpt, format=self.data_fmt[self.out_fmt], canvas_size=spatial_size)
+
+        if self.normalize:
+            inpt = inpt / torch.tensor(inpt.canvas_size[::-1]).tile(2)[None]
+
+        return inpt
+
+
+_ops_dict = {
+    'RandomPhotometricDistort' : T.RandomPhotometricDistort,
+    'RandomZoomOut' : T.RandomZoomOut,
+    'RandomIoUCrop' : RandomIoUCrop,
+    'RandomHorizontalFlip' : T.RandomHorizontalFlip,
+    'Resize' : T.Resize,
+    'ToImageTensor' : T.ToImage,
+    'ConvertDtype' : T.ConvertImageDtype,
+    'SanitizeBoundingBox' : T.SanitizeBoundingBoxes,
+    'RandomCrop' : T.RandomCrop,
+    'Normalize' : T.Normalize,
+    'ConvertBox' : ConvertBox,
+}
 
 
 class Compose(T.Compose):
     def __init__(self, ops) -> None:
+        global _ops_dict
         transforms = []
         if ops is not None:
             for op in ops:
                 if isinstance(op, dict):
                     name = op.pop('type')
-                    transfom = getattr(GLOBAL_CONFIG[name]['_pymodule'], name)(**op)
+                    transfom = _ops_dict[name](**op)
                     transforms.append(transfom)
                     # op['type'] = name
                 elif isinstance(op, nn.Module):
@@ -85,43 +139,3 @@ class PadToSize(T.Pad):
         return outputs
 
 
-class RandomIoUCrop(T.RandomIoUCrop):
-    def __init__(self, min_scale: float = 0.3, max_scale: float = 1, min_aspect_ratio: float = 0.5,
-                 max_aspect_ratio: float = 2, sampler_options: Optional[List[float]] = None, trials: int = 40,
-                 p: float = 1.0):
-        super().__init__(min_scale, max_scale, min_aspect_ratio, max_aspect_ratio, sampler_options, trials)
-        self.p = p
-
-    def __call__(self, *inputs: Any) -> Any:
-        if torch.rand(1) >= self.p:
-            return inputs if len(inputs) > 1 else inputs[0]
-
-        return super().forward(*inputs)
-
-
-class ConvertBox(T.Transform):
-    _transformed_types = (
-        tv_tensors.BoundingBoxes,
-    )
-
-    def __init__(self, out_fmt='', normalize=False) -> None:
-        super().__init__()
-        self.out_fmt = out_fmt
-        self.normalize = normalize
-
-        self.data_fmt = {
-            'xyxy': tv_tensors.BoundingBoxFormat.XYXY,
-            'cxcywh': tv_tensors.BoundingBoxFormat.CXCYWH
-        }
-
-    def _transform(self, inpt: Any, params: Dict[str, Any]) -> Any:
-        if self.out_fmt:
-            spatial_size = inpt.canvas_size
-            in_fmt = inpt.format.value.lower()
-            inpt = torchvision.ops.box_convert(inpt, in_fmt=in_fmt, out_fmt=self.out_fmt)
-            inpt = tv_tensors.BoundingBoxes(inpt, format=self.data_fmt[self.out_fmt], canvas_size=spatial_size)
-
-        if self.normalize:
-            inpt = inpt / torch.tensor(inpt.canvas_size[::-1]).tile(2)[None]
-
-        return inpt

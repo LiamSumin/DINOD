@@ -2,7 +2,7 @@ from typing import Tuple, Mapping, Any
 import torch
 import torch.nn as nn
 from collections import OrderedDict
-from timm.models.layers import trunc_normal_
+from timm.layers import trunc_normal_
 from lib.model.dinod.modules.backbone.dinov2 import DinoVisionTransformer, interpolate_pos_encoding
 from .modules.patch_embed import PatchEmbedNoSizeCheck
 from .modules.lora.apply import find_all_frozen_nn_linear_names, apply_lora
@@ -72,8 +72,14 @@ class DINOD(nn.Module):
         state_dict = super().state_dict(**kwargs)
         prefix = kwargs.get('prefix', '')
         for key in list(state_dict.keys()):
-            if not self.get_parameter(key[len(prefix):]).requires_grad:
-                state_dict.pop(key)
+            # Check if it is a parameter or a buffer
+            param_name = key[len(prefix):]
+            if param_name in self._parameters:  # Check if it is a parameter
+                param = self.get_parameter(param_name)
+                if not param.requires_grad:
+                    state_dict.pop(key)
+            elif param_name in self._buffers:  # Check if it is a buffer
+                continue  # Optionally keep the buffer, or filter if necessary
         if self.lora_alpha != 1.:
             state_dict[prefix + 'lora_alpha'] = torch.as_tensor(self.lora_alpha)
             state_dict[prefix + 'use_rslora'] = torch.as_tensor(self.use_rslora)

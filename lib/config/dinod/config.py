@@ -33,7 +33,7 @@ cfg.MODEL = edict()
 cfg.MODEL.NAME = "DINOD"
 cfg.MODEL.TYPE = 'small'
 cfg.MODEL.PRETRAINED_PATH = "pretrained"
-
+cfg.MODEL.last_epoch = -1
 
 # MODEL.BACKBONE
 cfg.MODEL.BACKBONE = edict()
@@ -48,14 +48,26 @@ cfg.MODEL.DECODER.TYPE = "RTDETR_DECODER"
 
 cfg.MODEL.DECODER.CONFIG = edict()
 cfg.MODEL.DECODER.CONFIG.feat_channels = [384]
-cfg.MODEL.DECODER.CONFIG.feat_strides = [14]
-cfg.MODEL.DECODER.CONFIG.hidden_dim = 256
-cfg.MODEL.DECODER.CONFIG.num_levels = 3
+cfg.MODEL.DECODER.CONFIG.feat_strides = [8]
+cfg.MODEL.DECODER.CONFIG.hidden_dim = 384
+cfg.MODEL.DECODER.CONFIG.num_levels = 1
 cfg.MODEL.DECODER.CONFIG.num_queries = 300
 cfg.MODEL.DECODER.CONFIG.num_decoder_layers = 6
 cfg.MODEL.DECODER.CONFIG.num_denoising = 100
 cfg.MODEL.DECODER.CONFIG.eval_idx = -1
 cfg.MODEL.DECODER.CONFIG.eval_spatial_size = [518, 518]
+
+# MODEL.CRITERION
+cfg.MODEL.CRITERION = edict()
+cfg.MODEL.CRITERION.weight_dict = {"loss_vfl": 1, "loss_bbox": 5, "loss_giou": 2, }
+cfg.MODEL.CRITERION.losses = ['vfl', 'boxes', ]
+cfg.MODEL.CRITERION.alpha = 0.75
+cfg.MODEL.CRITERION.gamma = 2.0
+cfg.MODEL.CRITERION.MATCHER = edict()
+cfg.MODEL.CRITERION.MATCHER.type = "HungarianMatcher"
+cfg.MODEL.CRITERION.MATCHER.weight_dict = {'cost_class': 2, 'cost_bbox': 5, 'cost_giou': 2}
+cfg.MODEL.CRITERION.MATCHER.alpha = 0.25
+cfg.MODEL.CRITERION.MATCHER.gamma = 2.0
 
 # MODEL.POSTPROCESS
 cfg.MODEL.POSTPROCESS = edict()
@@ -90,9 +102,9 @@ cfg.OPTIMIZER.LR_SCHEDULER.gamma = 0.1
 
 # OPTIMIZER.EMA
 cfg.OPTIMIZER.EMA = edict()
-cfg.OPTIMIZER.EMA.type ='ModelEMA'
+cfg.OPTIMIZER.EMA.type = 'ModelEMA'
 
-cfg.OPTIMIZER.EMA.CONFIG =edict()
+cfg.OPTIMIZER.EMA.CONFIG = edict()
 cfg.OPTIMIZER.EMA.CONFIG.decay = 0.9999
 cfg.OPTIMIZER.EMA.CONFIG.warmups = 2000
 
@@ -100,70 +112,73 @@ cfg.OPTIMIZER.EMA.CONFIG.warmups = 2000
 cfg.DATALOADER = edict()
 cfg.DATALOADER.task = "detection"
 cfg.DATALOADER.num_classes = 80
-cfg.DATALOADER.remap_mscoco_category = True
-
 # DATALOADER.TRAIN
 cfg.DATALOADER.TRAIN = edict()
 cfg.DATALOADER.TRAIN.type = "DataLoader"
 cfg.DATALOADER.TRAIN.dataset = edict()
 cfg.DATALOADER.TRAIN.dataset.type = "CocoDetection"
-cfg.DATALOADER.TRAIN.dataset.img_folder= "/home2/ObjectDetection/COCO/train2017/"
-cfg.DATALOADER.TRAIN.dataset.ann_file= "/home2/ObjectDetection/COCO/annotations/instances_train2017.json"
-cfg.DATALOADER.TRAIN.dataset.return_masks= False
+cfg.DATALOADER.TRAIN.dataset.img_folder = "/home2/ObjectDetection/COCO/train2017/"
+cfg.DATALOADER.TRAIN.dataset.ann_file = "/home2/ObjectDetection/COCO/annotations/instances_train2017.json"
+cfg.DATALOADER.TRAIN.dataset.return_masks = False
+cfg.DATALOADER.TRAIN.dataset.remap_mscoco_category = True
 cfg.DATALOADER.TRAIN.dataset.transforms = edict()
 cfg.DATALOADER.TRAIN.dataset.transforms.type = "Compose"
-cfg.DATALOADER.TRAIN.dataset.transforms.ops= [
-                    {"type": "RandomPhotometricDistort", "p": 0.5},
-                    {"type": "RandomZoomOut", "fill": 0},
-                    {"type": "RandomIoUCrop", "p": 0.8},
-                    {"type": "SanitizeBoundingBox", "min_size": 1},
-                    {"type": "RandomHorizontalFlip"},
-                    {"type": "Resize", "size": [518, 518]},
-                    # {"type": "Resize", "size": 639, "max_size": 640},
-                    # {"type": "PadToSize", "spatial_size": 640},
-                    {"type": "ToImageTensor"},
-                    {"type": "ConvertDtype"},
-                    {"type": "SanitizeBoundingBox", "min_size": 1},
-                    {"type": "ConvertBox", "out_fmt": "cxcywh", "normalize": True}
+cfg.DATALOADER.TRAIN.dataset.transforms.ops = [
+    {"type": "RandomPhotometricDistort", "p": 0.5},
+    {"type": "RandomZoomOut", "fill": 0},
+    {"type": "RandomIoUCrop", "p": 0.8},
+    {"type": "SanitizeBoundingBox", "min_size": 1},
+    {"type": "RandomHorizontalFlip"},
+    {"type": "Resize", "size": [518, 518]},
+    # {"type": "Resize", "size": 639, "max_size": 640},
+    # {"type": "PadToSize", "spatial_size": 640},
+    {"type": "ToImageTensor"},
+    {"type": "ConvertDtype"},
+    {"type": "SanitizeBoundingBox", "min_size": 1},
+    {"type": "ConvertBox", "out_fmt": "cxcywh", "normalize": True}
 ]
 cfg.DATALOADER.TRAIN.shuffle = True
-cfg.DATALOADER.TRAIN.batch_size=8
-cfg.DATALOADER.TRAIN.num_workers=4
-cfg.DATALOADER.TRAIN.drop_last=True
-cfg.DATALOADER.TRAIN.collate_fn="default_collate_fn"
+cfg.DATALOADER.TRAIN.batch_size = 32
+cfg.DATALOADER.TRAIN.num_workers = 12
+cfg.DATALOADER.TRAIN.drop_last = True
+cfg.DATALOADER.TRAIN.collate_fn = "default_collate_fn"
 
 # DATALOADER.VAL
 cfg.DATALOADER.VAL = edict()
 cfg.DATALOADER.VAL.type = "DataLoader"
 cfg.DATALOADER.VAL.dataset = edict()
 cfg.DATALOADER.VAL.dataset.type = "CocoDetection"
-cfg.DATALOADER.VAL.dataset.img_folder= "/home2/ObjectDetection/COCO/val2017/"
-cfg.DATALOADER.VAL.dataset.ann_file= "/home2/ObjectDetection/COCO/annotations/instances_val2017.json"
+cfg.DATALOADER.VAL.dataset.img_folder = "/home2/ObjectDetection/COCO/val2017/"
+cfg.DATALOADER.VAL.dataset.ann_file = "/home2/ObjectDetection/COCO/annotations/instances_val2017.json"
+cfg.DATALOADER.VAL.dataset.return_masks = False
+cfg.DATALOADER.VAL.dataset.remap_mscoco_category = True
 cfg.DATALOADER.VAL.dataset.transforms = edict()
 cfg.DATALOADER.VAL.dataset.transforms.type = "Compose"
-cfg.DATALOADER.VAL.dataset.transforms.ops= [
+cfg.DATALOADER.VAL.dataset.transforms.ops = [
     {"type": "Resize", "size": [518, 518]},
     {"type": "ToImageTensor"},
     {"type": "ConvertDtype"}
 ]
 cfg.DATALOADER.VAL.shuffle = False
-cfg.DATALOADER.VAL.batch_size=8
-cfg.DATALOADER.VAL.num_workers=4
-cfg.DATALOADER.VAL.drop_last=False
-cfg.DATALOADER.VAL.collate_fn="default_collate_fn"
-
+cfg.DATALOADER.VAL.batch_size = 32
+cfg.DATALOADER.VAL.num_workers = 12
+cfg.DATALOADER.VAL.drop_last = False
+cfg.DATALOADER.VAL.collate_fn = "default_collate_fn"
 
 #
 cfg.TRAIN = edict()
+cfg.TRAIN.epochs = 100
+cfg.TRAIN.clip_max_norm = 0.1
+cfg.TRAIN.find_unused_parameters = True
+cfg.log_dir = "./logs/"
+cfg.TRAIN.log_step = 10
+cfg.TRAIN.checkpoint_step = 1
 
 # TEST
 cfg.TEST = edict()
 
-
 # DATA
 cfg.DATA = edict()
-
-
 
 
 def _edict2dict(dest_dict, src_edict):
