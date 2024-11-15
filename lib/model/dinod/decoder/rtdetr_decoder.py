@@ -417,8 +417,7 @@ class RTDETRTransformer(nn.Module):
                           dtype=torch.float32,
                           device='cpu'):
         if spatial_shapes is None:
-            spatial_shapes = [[int(self.eval_spatial_size[0] / s), int(self.eval_spatial_size[1] / s)]
-                              for s in self.feat_strides]
+            spatial_shapes = [self.eval_spatial_size]
         anchors = []
         for lvl, (h, w) in enumerate(spatial_shapes):
             grid_y, grid_x = torch.meshgrid( torch.arange(end=h, dtype=dtype), torch.arange(end=w, dtype=dtype), indexing='ij')

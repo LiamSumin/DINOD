@@ -12,6 +12,8 @@ from .dinod_engine import  train_one_epoch, evaluate
 
 class DinodSolver(BaseSolver):
     def fit(self, ):
+
+
         print("Start training")
         self.train()
 
@@ -41,11 +43,11 @@ class DinodSolver(BaseSolver):
                 if (epoch + 1) % args.checkpoint_step == 0:
                     checkpoint_paths.append(self.output_dir / f'checkpoint{epoch:04}.pth')
                 for checkpoint_path in checkpoint_paths:
-                    dist.save_on_master(self.state_dict(epoch), checkpoint_path)
-
+                    dist.save_on_master(self.model.state_dict(epoch), checkpoint_path)
+            import pdb; pdb.set_trace()
             module = self.ema.module if self.ema else self.model
             test_stats, coco_evaluator = evaluate(
-                module, self.criterion, self.postprocessor, self.val_dataloader, base_ds, self.device, self.output_dir
+                module, self.criterion, self.postprocessor, self.val_dataloader, base_ds, self.device, self.output_dir, epoch
             )
 
             # TODO
@@ -62,6 +64,7 @@ class DinodSolver(BaseSolver):
                          **{f'test_{k}': v for k, v in test_stats.items()},
                          'epoch': epoch,
                          'n_parameters': n_parameters}
+
 
             if self.output_dir and dist.is_main_process():
                 with (self.output_dir / "log.txt").open("a") as f:

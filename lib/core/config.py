@@ -19,6 +19,8 @@ class BaseConfig(object):
 
         self.task: str = None
 
+        self.model_name:str = None
+        self.model_size:str = None
         self._model: nn.Module = None
         self._postprocessor: nn.Module = None
         self._criterion: nn.Module = None

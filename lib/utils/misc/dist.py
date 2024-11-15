@@ -17,6 +17,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DistributedSampler
 from torch.utils.data.dataloader import DataLoader
 
+
 def init_distributed():
     """
     distributed setup
@@ -24,12 +25,14 @@ def init_distributed():
         backend (str), ('nccl', 'gloo')
     """
     try:
-        tdist.init_process_group(init_method="env://", )
-        torch.distributed.barrier()
+        tdist.init_process_group(init_method='env://')
 
         rank = get_rank()
         device = torch.device(f"cuda:{rank}")
         torch.cuda.set_device(device)
+
+        torch.distributed.barrier()
+
 
         setup_print(rank == 0)
         print("Initialized distributed mode ... ")

@@ -18,7 +18,8 @@ class YAMLConfig(BaseConfig):
         # pprint(cfg)
 
         self.yaml_cfg = cfg
-
+        self.model_name = cfg.get('model_name', None)
+        self.model_size = cfg.get('model_size', None)
         self.log_step = cfg.get('log_step', 100)
         self.checkpoint_step = cfg.get('checkpoint_step', 1)
         self.epochs = cfg.get('epochs', -1)

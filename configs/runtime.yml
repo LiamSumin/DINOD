@@ -1,3 +1,5 @@
+model_name: DINOD
+model_size: small
 sync_bn: True
 find_unused_parameters: False
 

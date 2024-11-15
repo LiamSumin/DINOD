@@ -7,7 +7,10 @@ from typing import Dict
 
 from lib.utils.misc import dist
 from lib.core import BaseConfig
+import wandb
 
+torch.multiprocessing.set_sharing_strategy('file_system')
+#torch.distributed.init_process_group(backend='nccl')
 class BaseSolver(object):
     def __init__(self, cfg: BaseConfig)-> None:
         self.cfg =cfg
@@ -24,7 +27,6 @@ class BaseSolver(object):
         self.model = dist.warp_model(cfg.model.to(device), cfg.find_unused_parameters, cfg.sync_bn)
         self.criterion = cfg.criterion.to(device)
         self.postprocessor = cfg.postprocessor
-
         # NOTE (lvwenyu): should load_tuning_state before ema instance building
         if self.cfg.tuning:
             print(f'Tuning checkpoint from {self.cfg.tuning}')
@@ -50,7 +52,7 @@ class BaseSolver(object):
                                                  shuffle=self.cfg.train_dataloader.shuffle)
         self.val_dataloader = dist.warp_loader(self.cfg.val_dataloader,
                                                shuffle=self.cfg.val_dataloader.shuffle)
-
+        import pdb; pdb.set_trace()
     def eval(self, ):
         self.setup()
         self.val_dataloader = dist.warp_loader(self.cfg.val_dataloader,

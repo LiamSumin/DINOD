@@ -70,6 +70,7 @@ def get_contrastive_denoising_training_group(targets,
         input_query_bbox = box_xyxy_to_cxcywh(known_bbox)
         input_query_bbox = inverse_sigmoid(input_query_bbox)
 
+    import pdb; pdb.set_trace()
     input_query_class = class_embed(input_query_class)
 
     tgt_size = num_denoising + num_queries

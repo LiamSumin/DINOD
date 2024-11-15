@@ -34,15 +34,15 @@ class LoRA_DINOv2(nn.Module):
                  use_rslora:bool = False
                  ):
         super().__init__()
-
-        if model == 's':
-            vit = vit_small(patch_size, **config)
-        elif model == 'b':
-            vit = vit_base(patch_size, **config)
-        elif model == 'l':
-            vit = vit_large(patch_size, **config)
-        if pretrained:
-            vit.load_state_dict(torch.load(os.path.join(pretrained_path, f"dinov2_vit{model}14_pretrain.pth"), weights_only=True))
+        if self.training:
+            if model == 's':
+                vit = vit_small(patch_size, **config)
+            elif model == 'b':
+                vit = vit_base(patch_size, **config)
+            elif model == 'l':
+                vit = vit_large(patch_size, **config)
+            if pretrained:
+                vit.load_state_dict(torch.load(os.path.join(pretrained_path, f"dinov2_vit{model}14_pretrain.pth"), weights_only=True))
     
         self.feat_size = to_2tuple(feat_size)
         self.patch_size = to_2tuple(patch_size)
@@ -91,6 +91,7 @@ class LoRA_DINOv2(nn.Module):
             state_dict[prefix + 'lora_alpha'] = torch.as_tensor(self.lora_alpha)
             state_dict[prefix + 'use_rslora'] = torch.as_tensor(self.use_rslora)
         return state_dict
+
 
     def load_state_dict(self, state_dict: Mapping[str, Any], **kwargs):
         if 'lora_alpha' in state_dict:

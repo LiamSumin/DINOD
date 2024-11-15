@@ -7,6 +7,16 @@ import lib.utils.misc.dist as dist
 from lib.core import YAMLConfig
 from lib.solver import TASKS
 
+import wandb
+from datetime import datetime
+def wandb_setup(project_name, model_size):
+    now = datetime.now()
+    date_time = now.strftime("%m_%d_%y-%H-%M")
+    run = wandb.init(
+        project=project_name,
+        name=model_size+"_"+date_time,
+        group="DDP",
+    )
 
 def main(args, ) -> None:
     """
@@ -25,6 +35,9 @@ def main(args, ) -> None:
         use_amp=args.amp,
         tuning=args.tuning
     )
+
+    if dist.get_rank() ==0:
+        wandb_setup(cfg.model_name, cfg.model_size)
 
     solver = TASKS[cfg.yaml_cfg['task']](cfg)
 

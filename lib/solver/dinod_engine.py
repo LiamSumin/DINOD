@@ -12,7 +12,8 @@ import torch.amp
 
 from lib.data import CocoEvaluator
 from lib.utils.misc import (MetricLogger, SmoothedValue, reduce_dict)
-
+import wandb
+from lib.utils.misc import get_rank
 
 def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
                     data_loader: Iterable, optimizer: torch.optim.Optimizer,
@@ -77,18 +78,28 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
 
         metric_logger.update(loss=loss_value, **loss_dict_reduced)
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
+        if get_rank() == 0 and False:
+            wandb.log({
+                'epoch': epoch,
+                'loss': loss_value,
+                **loss_dict_reduced,
+                'lr': optimizer.param_groups[0]["lr"],
+                'outputs':outputs,
+                'ground_truth':targets
+            })
 
-    # gather the stats from all processes
-    metric_logger.synchronize_between_processes()
-    print("Averaged stats:", metric_logger)
-    return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
+        # gather the stats from all processes
+        metric_logger.synchronize_between_processes()
+        print("Averaged stats:", metric_logger)
+        return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
 
 @torch.no_grad()
 def evaluate(model: torch.nn.Module, criterion: torch.nn.Module, postprocessors, data_loader, base_ds, device,
-             output_dir):
+             output_dir, epochs):
     model.eval()
     criterion.eval()
+
 
     metric_logger = MetricLogger(delimiter="  ")
     # metric_logger.add_meter('class_error', SmoothedValue(window_size=1, fmt='{value:.2f}'))
@@ -113,6 +124,7 @@ def evaluate(model: torch.nn.Module, criterion: torch.nn.Module, postprocessors,
 
         # with torch.autocast(device_type=str(device)):
         #     outputs = model(samples)
+
 
         outputs = model(samples)
 
@@ -179,5 +191,11 @@ def evaluate(model: torch.nn.Module, criterion: torch.nn.Module, postprocessors,
     #     stats['PQ_all'] = panoptic_res["All"]
     #     stats['PQ_th'] = panoptic_res["Things"]
     #     stats['PQ_st'] = panoptic_res["Stuff"]
+
+    if get_rank() == 0:
+        wandb.log({
+            'epoch': epochs,
+            'coco_eval_bbox': stats['coco_eval_bbox'][0],
+        })
 
     return stats, coco_evaluator
