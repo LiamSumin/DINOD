@@ -13,7 +13,7 @@ import warnings
 
 from torch import Tensor
 from torch import nn
-
+from lib.utils.misc import dist
 
 logger = logging.getLogger("dinov2")
 
@@ -24,13 +24,16 @@ try:
         from xformers.ops import memory_efficient_attention, unbind
 
         XFORMERS_AVAILABLE = True
-        warnings.warn("xFormers is available (Attention)")
+        if dist.is_main_process():
+            warnings.warn("xFormers is available (Attention)")
     else:
-        warnings.warn("xFormers is disabled (Attention)")
+        if dist.is_main_process():
+            warnings.warn("xFormers is disabled (Attention)")
         raise ImportError
 except ImportError:
     XFORMERS_AVAILABLE = False
-    warnings.warn("xFormers is not available (Attention)")
+    if dist.is_main_process():
+        warnings.warn("xFormers is not available (Attention)")
 
 
 class Attention(nn.Module):

@@ -48,7 +48,7 @@ class RTDETRPostProcessor(nn.Module):
 
         # TODO
         if self.remap_mscoco_category:
-            from ....data.coco import mscoco_label2category
+            from lib.data.coco.coco_dataset import mscoco_label2category
             labels = torch.tensor([mscoco_label2category[int(x.item())] for x in labels.flatten()]) \
                 .to(boxes.device).reshape(labels.shape)
 

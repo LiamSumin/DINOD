@@ -9,7 +9,8 @@ import torch.amp
 
 from lib.data import CocoEvaluator
 from lib.utils.misc import (MetricLogger, SmoothedValue, reduce_dict)
-
+from lib.utils.misc import dist
+import wandb
 def train_one_epoch(model: torch.nn.Module,
                     criterion: torch.nn.Module,
                     data_loader: Iterable,
@@ -17,6 +18,7 @@ def train_one_epoch(model: torch.nn.Module,
                     device: torch.device,
                     epoch: int,
                     max_norm: float = 0,
+                    logging: bool =False,
                     **kwargs):
     model.train()
     criterion.train()
@@ -72,6 +74,16 @@ def train_one_epoch(model: torch.nn.Module,
         loss_dict_reduced = reduce_dict(loss_dict)
         loss_value = sum(loss_dict_reduced.values())
 
+        if dist.is_main_process() and logging :
+            wandb.log({
+                "epoch": epoch,
+                "loss" : loss_value,
+                **loss_dict_reduced,
+                "outputs" : outputs,
+                "ground_truth" : targets
+            })
+
+
         if not math.isfinite(loss_value):
             print("Loss is {}, stopping training".format(loss_value))
             print(loss_dict_reduced)
@@ -85,6 +97,7 @@ def train_one_epoch(model: torch.nn.Module,
     print("Averaged stats:", metric_logger)
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
+import time
 @torch.no_grad()
 def evaluate(model: torch.nn.Module,
              criterion: torch.nn.Module,
@@ -92,7 +105,9 @@ def evaluate(model: torch.nn.Module,
              data_loader,
              base_ds,
              device,
-             output_dir):
+             output_dir,
+             epochs=100,
+            logging=False,):
     model.eval()
     criterion.eval()
 
@@ -112,49 +127,34 @@ def evaluate(model: torch.nn.Module,
     #         data_loader.dataset.ann_folder,
     #         output_dir=os.path.join(output_dir, "panoptic_eval"),
     #     )
+    total_samples = 0
+    total_time = 0.0  # Total time for throughput measurement
+    latency_list = []  # List to store per-sample latency
 
     for samples, targets in metric_logger.log_every(data_loader, 10, header):
+        batch_size = 8
+        total_samples += batch_size
+
         samples = samples.to(device)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
-        # with torch.autocast(device_type=str(device)):
-        #     outputs = model(samples)
+        torch.cuda.synchronize(device)
+        start_time = time.time()
 
         outputs = model(samples)
-
-        # loss_dict = criterion(outputs, targets)
-        # weight_dict = criterion.weight_dict
-        # # reduce losses over all GPUs for logging purposes
-        # loss_dict_reduced = reduce_dict(loss_dict)
-        # loss_dict_reduced_scaled = {k: v * weight_dict[k]
-        #                             for k, v in loss_dict_reduced.items() if k in weight_dict}
-        # loss_dict_reduced_unscaled = {f'{k}_unscaled': v
-        #                               for k, v in loss_dict_reduced.items()}
-        # metric_logger.update(loss=sum(loss_dict_reduced_scaled.values()),
-        #                      **loss_dict_reduced_scaled,
-        #                      **loss_dict_reduced_unscaled)
-        # metric_logger.update(class_error=loss_dict_reduced['class_error'])
+        torch.cuda.synchronize(device)
+        end_time = time.time()
+        batch_time = end_time - start_time
+        total_time += batch_time
+        latency_list.append(batch_time / batch_size)
 
         orig_target_sizes = torch.stack([t["orig_size"] for t in targets], dim=0)
         results = postprocessors(outputs, orig_target_sizes)
-        # results = postprocessors(outputs, targets)
-
-        # if 'segm' in postprocessors.keys():
-        #     target_sizes = torch.stack([t["size"] for t in targets], dim=0)
-        #     results = postprocessors['segm'](results, outputs, orig_target_sizes, target_sizes)
 
         res = {target['image_id'].item(): output for target, output in zip(targets, results)}
         if coco_evaluator is not None:
             coco_evaluator.update(res)
 
-        # if panoptic_evaluator is not None:
-        #     res_pano = postprocessors["panoptic"](outputs, target_sizes, orig_target_sizes)
-        #     for i, target in enumerate(targets):
-        #         image_id = target["image_id"].item()
-        #         file_name = f"{image_id:012d}.png"
-        #         res_pano[i]["image_id"] = image_id
-        #         res_pano[i]["file_name"] = file_name
-        #     panoptic_evaluator.update(res_pano)
 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
@@ -173,6 +173,13 @@ def evaluate(model: torch.nn.Module,
     # if panoptic_evaluator is not None:
     #     panoptic_res = panoptic_evaluator.summarize()
 
+    avg_latency = sum(latency_list) / len(latency_list) if latency_list else 0.0
+    throughput = total_samples / total_time if total_time > 0 else 0.0
+
+    print(f"Throughput: {throughput:.2f} samples/sec")
+    print(f"Average Latency: {avg_latency:.6f} sec/sample")
+    print(f"Total Parameter: {sum(p.numel() for p in model.parameters()) / 1e6:.2f}M")
+
     stats = {}
     # stats = {k: meter.global_avg for k, meter in metric_logger.meters.items()}
     if coco_evaluator is not None:
@@ -186,4 +193,11 @@ def evaluate(model: torch.nn.Module,
     #     stats['PQ_th'] = panoptic_res["Things"]
     #     stats['PQ_st'] = panoptic_res["Stuff"]
 
+    if dist.is_main_process() and logging:
+        wandb.log({
+            "epoch" : epochs,
+            "accuracy" : stats['coco_eval_bbox'][0],
+            "throughput": throughput,
+            "latency": avg_latency
+        })
     return stats, coco_evaluator

@@ -1,3 +1,5 @@
 __pycache__/
 .idea
 pretrained/dinov2*
+evaluation
+wandb

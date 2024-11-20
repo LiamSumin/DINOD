@@ -25,7 +25,11 @@ def init_distributed():
         backend (str), ('nccl', 'gloo')
     """
     try:
-        tdist.init_process_group(init_method='env://')
+        torch.multiprocessing.set_sharing_strategy('file_system')
+        tdist.init_process_group( init_method='env://')
+        torch.backends.cudnn.benchmark = True
+        torch.set_num_threads(4)
+
 
         rank = get_rank()
         device = torch.device(f"cuda:{rank}")

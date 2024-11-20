@@ -31,7 +31,7 @@ class DINODSolver(BaseSolver):
 
             train_stats = train_one_epoch(
                 self.model, self.criterion, self.train_dataloader, self.optimizer, self.device, epoch,
-                args.TRAIN.clip_max_norm, print_freq=args.TRAIN.log_step, ema=self.ema, scaler=self.scaler
+                args.TRAIN.clip_max_norm, print_freq=args.TRAIN.log_step, ema=self.ema, scaler=self.scaler, logging= args.LOGGING.run
             )
             self.lr_scheduler.step()
 
@@ -45,7 +45,7 @@ class DINODSolver(BaseSolver):
 
             module = self.ema.module if self.ema else self.model
             test_stats, coco_evaluator = evaluate(
-                module, self.criterion, self.postprocessor, self.val_dataloader, base_ds, self.device, self.output_dir
+                module, self.criterion, self.postprocessor, self.val_dataloader, base_ds, self.device, self.output_dir, epoch, logging=args.LOGGING.run
             )
 
             # TODO
@@ -62,6 +62,8 @@ class DINODSolver(BaseSolver):
                          **{f'test_{k}': v for k, v in test_stats.items()},
                          'epoch': epoch,
                          'n_parameters': n_parameters}
+
+
 
             if self.output_dir and dist.is_main_process():
                 with (self.output_dir / "log.txt").open("a") as f:
@@ -89,7 +91,7 @@ class DINODSolver(BaseSolver):
 
         module = self.ema.module if self.ema else self.model
         test_stats, coco_evaluator = evaluate(module, self.criterion, self.postprocessor,
-                                              self.val_dataloader, base_ds, self.device, self.output_dir)
+                                              self.val_dataloader, base_ds, self.device, self.output_dir, logging=self.cfg.LOGGING.run)
 
         if self.output_dir:
             dist.save_on_master(coco_evaluator.coco_eval["bbox"].eval, self.output_dir / "eval.pth")

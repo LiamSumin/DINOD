@@ -38,7 +38,7 @@ def create_dataloader(config, mode="train"):
     # Create DataLoader
     del config['dataset']
     del config['collate_fn']
-    loader = DataLoader(dataset=dataset, sampler=sampler, collate_fn= default_collate_fn, **config)
+    loader = DataLoader(dataset=dataset, sampler=sampler, collate_fn=default_collate_fn, **config)
     return loader
 
 

@@ -35,7 +35,7 @@ class BaseSolver(object):
 
         self.model = dist.warp_model(get_DINOD_build_context(cfg).to(self.device), runtime_config['find_unused_parameters'], runtime_config['sync_bn'])
         self.criterion = get_criterion(cfg.MODEL.CRITERION).to(self.device)
-        self.postprocessor = get_postprocessor(cfg['MODEL']['POSTPROCESS']).to(self.device)
+        self.postprocessor = get_postprocessor(cfg.MODEL.POSTPROCESS).to(self.device)
 
 
         if cfg.RUNTIME.use_amp == False:
@@ -50,6 +50,10 @@ class BaseSolver(object):
         self.optimizer = get_optimizer(self.cfg.OPTIMIZER.OPTIMIZER, self.model.parameters())
         self.lr_scheduler = get_lr_scheduler(self.cfg.OPTIMIZER.LR_SCHEDULER, self.optimizer)
 
+        if self.cfg.resume:
+            print(f"Resume checkpoint from {self.cfg.resume}")
+            self.resume(self.cfg.resume)
+
         self.train_dataloader = get_train_dataloader(self.cfg.DATALOADER.TRAIN)
         self.val_dataloader = get_val_dataloader(self.cfg.DATALOADER.VAL)
 
@@ -57,6 +61,10 @@ class BaseSolver(object):
 
     def eval(self, ):
         self.setup()
+        if self.cfg.resume:
+            print(f"Resume checkpoint from {self.cfg.resume}")
+            self.resume(self.cfg.resume)
+
         self.val_dataloader = get_val_dataloader(self.cfg.DATALOADER.VAL)
 
     def state_dict(self, last_epoch):

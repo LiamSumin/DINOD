@@ -1,0 +1,173 @@
+task: detection
+resume: 
+
+COMMON :
+    feat_size: [518, 518]
+    patch_size: [14, 14]
+    lora_r: 64
+    lora_alpha: 64
+    lora_dropout: 0.
+    use_rslora: False
+
+RUNTIME: 
+    sync_bn: True
+    find_unused_parameters: True
+    output_dir: evaluation/batch_8_decoder_9
+    use_ema: True
+    use_amp: False
+
+    scaler: 
+        type: GradScaler
+        enabled: True
+
+    ema: 
+        type: ModelEMA
+        decay: 0.9999
+        warmups: 2000
+
+# MODEL
+MODEL: 
+    NAME: DINOD
+    TYPE: small
+    PRETRAINED_PATH: pretrained
+    last_epoch: -1
+
+# MODEL.BACKBONE
+    BACKBONE: 
+        type: DINOv2
+        name: ViT-S/14
+        acc: default
+        pretrained: MODEL.PRETRAINED_PATH
+
+# MODEL.DECODER
+    DECODER: 
+        TYPE: RTDETR_DECODER
+
+        CONFIG: 
+            feat_channels: [384]
+            feat_strides: [8]
+            hidden_dim: 384
+            num_levels: 1
+            num_queries: 300
+            num_decoder_layers: 9
+            num_denoising: 100
+
+            eval_idx: -1
+            eval_spatial_size: [37, 37]
+
+# MODEL.CRITERION
+    CRITERION: 
+        weight_dict: {loss_vfl: 1, loss_bbox: 5, loss_giou: 2, }
+        losses: [vfl, boxes, ]
+        alpha: 0.75
+        gamma: 2.0
+        MATCHER: 
+            type: HungarianMatcher
+            weight_dict: {cost_class: 2, cost_bbox: 5, cost_giou: 2}
+            alpha: 0.25
+            gamma: 2.0
+
+# MODEL.POSTPROCESS
+    POSTPROCESS: 
+        num_top_queries: 300
+        remap_mscoco_category: True
+
+# OPTIMIZER
+OPTIMIZER: 
+
+# OPTIMIZER.OPTIMIZER
+    OPTIMIZER: 
+      type: AdamW
+
+      lr: 0.0001
+      betas: [0.9, 0.999]
+      weight_decay: 0.0001
+
+    LR_SCHEDULER: 
+        type: MultiStepLR
+        milestones: [1000]
+        gamma: 0.1
+
+# OPTIMIZER.EMA
+    EMA: 
+        type: ModelEMA
+
+        CONFIG: 
+            decay: 0.9999
+            warmups: 2000
+
+# DATALOADER
+DATALOADER: 
+    task: detection
+    num_classes: 80
+# DATALOADER.TRAIN
+    TRAIN: 
+        type: DataLoader
+        dataset: 
+            type: CocoDetection
+            img_folder: /home2/ObjectDetection/COCO/train2017/
+            ann_file: /home2/ObjectDetection/COCO/annotations/instances_train2017.json
+            return_masks: False
+            remap_mscoco_category: True
+            transforms: 
+                type: Compose
+                ops: [
+                    {type: RandomPhotometricDistort, p: 0.5},
+                    {type: RandomZoomOut, fill: 0},
+                    {type: RandomIoUCrop, p: 0.8},
+                    {type: SanitizeBoundingBox, min_size: 1},
+                    {type: RandomHorizontalFlip},
+                    {type: Resize, size: [518, 518]},
+                    # {type: Resize, size: 639, max_size: 640},
+                    # {type: PadToSize, spatial_size: 640},
+                    {type: ToImageTensor},
+                    {type: ConvertDtype},
+                    {type: SanitizeBoundingBox, min_size: 1},
+                    {type: ConvertBox, out_fmt: cxcywh, normalize: True}
+                ]
+        shuffle: True
+        batch_size: 8
+        num_workers: 16
+        drop_last: True
+        collate_fn: default_collate_fn
+
+# DATALOADER.VAL
+    VAL: 
+        type: DataLoader
+        dataset: 
+            type: CocoDetection
+            img_folder: /home2/ObjectDetection/COCO/val2017/
+            ann_file: /home2/ObjectDetection/COCO/annotations/instances_val2017.json
+            return_masks: False
+            remap_mscoco_category: True
+            transforms: 
+                type: Compose
+                ops: [
+                {type: Resize, size: [518, 518]},
+                {type: ToImageTensor},
+                {type: ConvertDtype}
+            ]
+        shuffle: False
+        batch_size: 8
+        num_workers: 16
+        drop_last: False
+        collate_fn: default_collate_fn
+
+# TRAIN
+TRAIN: 
+    epochs: 100
+    clip_max_norm: 0.1
+    find_unused_parameters: True
+    log_dir: ./logs/
+    log_step: 50
+    checkpoint_step: 1
+
+# LOGGING
+LOGGING: 
+    run: False
+
+# TEST
+TEST: 
+
+# DATA
+DATA: 

@@ -3,7 +3,6 @@ import yaml
 
 cfg = edict()
 cfg.task = "detection"
-cfg.resume = ""
 
 cfg.COMMON = edict()
 cfg.COMMON.feat_size = [518, 518]
@@ -11,7 +10,7 @@ cfg.COMMON.patch_size = [14, 14]
 cfg.COMMON.lora_r = 64
 cfg.COMMON.lora_alpha = 64
 cfg.COMMON.lora_dropout = 0.
-cfg.COMMON.use_rslora = False
+cfg.COMMON.use_rslora= False
 
 cfg.RUNTIME = edict()
 cfg.RUNTIME.sync_bn = True
@@ -141,7 +140,7 @@ cfg.DATALOADER.TRAIN.dataset.transforms.ops = [
     {"type": "ConvertBox", "out_fmt": "cxcywh", "normalize": True}
 ]
 cfg.DATALOADER.TRAIN.shuffle = True
-cfg.DATALOADER.TRAIN.batch_size = 32
+cfg.DATALOADER.TRAIN.batch_size = 8
 cfg.DATALOADER.TRAIN.num_workers = 16
 cfg.DATALOADER.TRAIN.drop_last = True
 cfg.DATALOADER.TRAIN.collate_fn = "default_collate_fn"
@@ -163,7 +162,7 @@ cfg.DATALOADER.VAL.dataset.transforms.ops = [
     {"type": "ConvertDtype"}
 ]
 cfg.DATALOADER.VAL.shuffle = False
-cfg.DATALOADER.VAL.batch_size = 32
+cfg.DATALOADER.VAL.batch_size = 8
 cfg.DATALOADER.VAL.num_workers = 16
 cfg.DATALOADER.VAL.drop_last = False
 cfg.DATALOADER.VAL.collate_fn = "default_collate_fn"

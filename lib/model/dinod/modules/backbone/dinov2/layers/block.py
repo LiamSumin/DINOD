@@ -19,7 +19,7 @@ from .attention import Attention, MemEffAttention
 from .drop_path import DropPath
 from .layer_scale import LayerScale
 from .mlp import Mlp
-
+from lib.utils.misc import dist
 
 logger = logging.getLogger("dinov2")
 
@@ -30,14 +30,16 @@ try:
         from xformers.ops import fmha, scaled_index_add, index_select_cat
 
         XFORMERS_AVAILABLE = True
-        warnings.warn("xFormers is available (Block)")
+        if dist.is_main_process():
+            warnings.warn("xFormers is available (Block)")
     else:
-        warnings.warn("xFormers is disabled (Block)")
+        if dist.is_main_process():
+            warnings.warn("xFormers is disabled (Block)")
         raise ImportError
 except ImportError:
     XFORMERS_AVAILABLE = False
-
-    warnings.warn("xFormers is not available (Block)")
+    if dist.is_main_process():
+        warnings.warn("xFormers is not available (Block)")
 
 
 class Block(nn.Module):

@@ -67,7 +67,7 @@ class DINOD(nn.Module):
             if hasattr(m, 'convert_to_deploy'):
                 m.convert_to_deploy()
         return self
-
+"""
     def state_dict(self, **kwargs):
         state_dict = super().state_dict(**kwargs)
         prefix = kwargs.get('prefix', '')
@@ -93,3 +93,4 @@ class DINOD(nn.Module):
             del state_dict['lora_alpha']
             del state_dict['use_rslora']
         return super().load_state_dict(state_dict, **kwargs)
+"""
