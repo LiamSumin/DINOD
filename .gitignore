@@ -3,3 +3,4 @@ __pycache__/
 pretrained/dinov2*
 evaluation
 wandb
+dataset

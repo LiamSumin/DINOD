@@ -16,7 +16,8 @@ import torch.distributed as tdist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DistributedSampler
 from torch.utils.data.dataloader import DataLoader
-
+from torch.multiprocessing import set_sharing_strategy
+import os
 
 def init_distributed():
     """
@@ -25,21 +26,30 @@ def init_distributed():
         backend (str), ('nccl', 'gloo')
     """
     try:
-        torch.multiprocessing.set_sharing_strategy('file_system')
-        tdist.init_process_group( init_method='env://')
+        set_sharing_strategy('file_system')
+
+        # Use environment variables for initialization
+        tdist.init_process_group(backend='nccl', init_method='env://')
         torch.backends.cudnn.benchmark = True
-        torch.set_num_threads(4)
+        torch.backends.cudnn.enabled = True
 
+        # # Optimize CPU thread allocation
+        # torch.set_num_threads(max(1, os.cpu_count() // tdist.get_world_size()))
 
-        rank = get_rank()
-        device = torch.device(f"cuda:{rank}")
-        torch.cuda.set_device(device)
+        # Setup device
+        rank = tdist.get_rank()
+        local_rank = rank % torch.cuda.device_count()
+        torch.cuda.set_device(local_rank)
+        device = torch.device(f"cuda:{local_rank}")
 
-        torch.distributed.barrier()
+        # Synchronize processes
+        tdist.barrier()
 
-
+        # Rank-based logging
         setup_print(rank == 0)
-        print("Initialized distributed mode ... ")
+
+        if rank == 0:
+            print("Distributed mode initialized successfully!")
         return True
 
     except:
