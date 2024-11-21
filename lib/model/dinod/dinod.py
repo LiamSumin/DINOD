@@ -9,7 +9,10 @@ from .modules.lora.apply import find_all_frozen_nn_linear_names, apply_lora
 from lib.model.dinod.modules.decoder import RTDETRTransformer
 
 class DINOD(nn.Module):
-    def __init__(self, backbone:DinoVisionTransformer,
+    def __init__(self,
+                 preprocessor,
+                 pre_to_bb_embeder,
+                 backbone:DinoVisionTransformer,
                  decoder: RTDETRTransformer,
                  feat_size: Tuple[int, int],
                  patch_size: Tuple[int, int],
@@ -18,6 +21,7 @@ class DINOD(nn.Module):
                  lora_dropout: float,
                  use_rslora: bool = False ):
         super().__init__()
+
         self.feat_size = feat_size
         self.patch_size = patch_size
         self.patch_embed = PatchEmbedNoSizeCheck.build(backbone.patch_embed)
@@ -41,18 +45,25 @@ class DINOD(nn.Module):
         self.token_type_embed = nn.Parameter(torch.empty(3, self.embed_dim))
         trunc_normal_(self.token_type_embed, std=.02)
 
+        self.preprocessor = preprocessor
+        self.pre_to_backbone_embeder = pre_to_bb_embeder
+
         for i_layer, block in enumerate(self.blocks):
             linear_names = find_all_frozen_nn_linear_names(block)
             apply_lora(block, linear_names, lora_r, lora_alpha, lora_dropout, use_rslora)
 
         self.decoder = decoder
 
-    def _x_feat(self, x:torch.Tensor):
-        x = self.patch_embed(x)
-        x = x + self.pos_embed
-        x = x + self.token_type_embed[2].view(1, 1, self.embed_dim)
-        return x
 
+    # def _x_feat(self, x:torch.Tensor):
+    #     x = self.patch_embed(x)
+    #     x = x + self.pos_embed
+    #     x = x + self.token_type_embed[2].view(1, 1, self.embed_dim)
+    #     return x
+    def _x_feat(self, x):
+        x_pre = self.preprocessor(x)
+        x_embed = self.pre_to_backbone_embeder(x_pre)
+        return x_embed
     def forward(self, x: torch.Tensor, targets=None):
         x = self._x_feat(x)
         for i in range(len(self.blocks)):

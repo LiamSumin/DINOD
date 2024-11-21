@@ -1,4 +1,4 @@
-from lib.model.dinod.modules.backbone.builder import build_backbone
+from lib.model.dinod.modules.backbone.builder import build_backbone, build_preprocessing
 from lib.model.dinod.modules.decoder.builder import build_decoder
 from lib.model import ModelBuildingContext, ModelImplSuggestions
 from .sample_data_generator import build_sample_input_data_generator
@@ -12,16 +12,20 @@ def get_DINOD_build_context(config: dict):
 
 def build_DINOD_model(config: dict): #, model_impl_suggestions: ModelImplSuggestions):
     model_config = config['MODEL']
+    preprocess_config= model_config['PREPROCESS']
     common_config = config['COMMON']
     backbone = build_backbone(model_config['BACKBONE'],)
     decoder = build_decoder(model_config['DECODER'], )
                               # torch_jit_trace_compatible=model_impl_suggestions.torch_jit_trace_compatible)
     model_type = model_config['NAME']
+
+    preprocessor, embeder = build_preprocessing(preprocess_config)
+
     if model_type == 'DINOD':
         # if model_impl_suggestions.optimize_for_inference:
         #     pass
         from .dinod import DINOD
-        model = DINOD(backbone, decoder, **common_config)
+        model = DINOD(preprocessor, embeder, backbone, decoder, **common_config)
 
     else:
         raise NotImplementedError(f"Model type '{model_type}' is not implemented.")

@@ -4,6 +4,7 @@ import torch
 from lib.misc.torch.distributed.barrier import torch_distributed_zero_first
 from lib.core.runtime.global_constant import get_global_constant
 
+
 def _build_backbone(backbone_config: dict, load_pretrained=True):
     backbone_config = copy.deepcopy(backbone_config)
 
@@ -27,3 +28,20 @@ def _build_backbone(backbone_config: dict, load_pretrained=True):
 def build_backbone(backbone_config: dict, load_pretrained=True):
     return _build_backbone(backbone_config, load_pretrained)
 
+
+def build_preprocessing(preprocess_config):
+    preprocess_type = preprocess_config.pop('type')
+
+    if preprocess_type == "Swinv2":
+        from .swinv2 import SwinV2FirstStage, SwinToDINOEmbedding
+        preprocess_nn = SwinV2FirstStage(img_size=preprocess_config.img_size, window_size= preprocess_config.window_size)
+        H_prime = W_prime = preprocess_config.img_size // preprocess_nn.patch_size
+        preprocessing_to_backbone_embedding = SwinToDINOEmbedding(input_dim=preprocess_config.input_dim,
+                                                           hidden_dim= preprocess_config.hidden_dim,
+                                                           H=H_prime,
+                                                           W=W_prime)
+
+    else :
+        raise NotImplementedError(f"The preprocessing method {preprocess_type} is not implemented.")
+
+    return preprocess_nn, preprocessing_to_backbone_embedding

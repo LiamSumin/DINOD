@@ -153,7 +153,10 @@ class WindowAttention(nn.Module):
 
         # cosine attention
         attn = (F.normalize(q, dim=-1) @ F.normalize(k, dim=-1).transpose(-2, -1))
-        logit_scale = torch.clamp(self.logit_scale, max=torch.log(torch.tensor(1. / 0.01))).exp()
+        logit_scale = torch.clamp(
+            self.logit_scale,
+            max=torch.log(torch.tensor(1. / 0.01, device=self.logit_scale.device))
+        ).exp()
         attn = attn * logit_scale
 
         relative_position_bias_table = self.cpb_mlp(self.relative_coords_table).view(-1, self.num_heads)
@@ -510,6 +513,7 @@ class SwinV2FirstStage(nn.Module):
                  mlp_ratio=4.0
                  ):
         super().__init__()
+        self.patch_size = patch_size
         self.patch_embed = PatchEmbed(img_size=img_size,
                                       patch_size=patch_size,
                                       in_chans=3,
@@ -531,14 +535,16 @@ class SwinV2FirstStage(nn.Module):
         return x
 
 class SwinToDINOEmbedding(nn.Module):
-    def __init__(self, input_dim=96, hidden_dim=768, patch_size=16):
+    def __init__(self, input_dim=96, hidden_dim=768, patch_size=16, H=160, W=160):
         super().__init__()
         self.patch_size = patch_size
         self.proj = nn.Linear(input_dim * patch_size * patch_size, hidden_dim)
+        self.H= H
+        self.W= W
 
-    def forward(self, x, H, W):
+    def forward(self, x):
         B, L, C = x.shape
-        x = x.view(B, H, W, C)
+        x = x.view(B, self.H, self.W, C)
         P = self.patch_size
         x = x.permute(0, 3, 1, 2)  # (B, C, H, W)
         x = x.unfold(2, P, P).unfold(3, P, P)  # 패치 분할
@@ -548,14 +554,19 @@ class SwinToDINOEmbedding(nn.Module):
 
 
 if __name__ == "__main__":
-    device =torch.device("cuda")
-    swin_stage1 = SwinV2FirstStage(img_size=640, window_size=10)
-    swin_to_dino = SwinToDINOEmbedding(input_dim=96, hidden_dim=384, patch_size=16)
-    x = torch.randn(1,3,640,640)
-    x_swin = swin_stage1(x)
-    H_prime = W_prime = 640 // 4
-    x_dino = swin_to_dino(x_swin, H=H_prime, W=W_prime)
+    # 장치 설정
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Using device: {device}")
 
-    print(x.shape)
-    print(x_swin.shape)
-    print(x_dino.shape)
+    # 입력 텐서 생성 및 GPU로 이동
+    x = torch.randn(1, 3, 640, 640).to(device)
+
+    # SwinV2FirstStage 적용
+    swin_stage1 = SwinV2FirstStage(img_size=640, window_size=10).to(device)  # 모델을 GPU로 이동
+    x_swin = swin_stage1(x)  # GPU에서 실행
+    print(f"x_swin.shape: {x_swin.shape}, device: {x_swin.device}")
+
+    # SwinToDINOEmbedding 적용
+    swin_to_dino = SwinToDINOEmbedding(input_dim=96, hidden_dim=768).to(device)  # 두 번째 모델도 GPU로 이동
+    x_dino = swin_to_dino(x_swin)  # GPU에서 실행
+    print(f"x_dino.shape: {x_dino.shape}, device: {x_dino.device}")

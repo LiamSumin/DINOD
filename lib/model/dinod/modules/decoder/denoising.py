@@ -11,7 +11,6 @@ def get_contrastive_denoising_training_group(targets,
                                              num_denoising=100,
                                              label_noise_ratio=0.5,
                                              box_noise_scale=1.0, ):
-
     """cnd"""
     if num_denoising <= 0:
         return None, None, None, None

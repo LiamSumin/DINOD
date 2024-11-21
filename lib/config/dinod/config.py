@@ -36,6 +36,14 @@ cfg.MODEL.TYPE = 'small'
 cfg.MODEL.PRETRAINED_PATH = "pretrained"
 cfg.MODEL.last_epoch = -1
 
+# MODE.PREPROCESS
+cfg.MODEL.PREPROCESS = edict()
+cfg.MODEL.PREPROCESS.type = "Swinv2"
+cfg.MODEL.PREPROCESS.img_size = 640
+cfg.MODEL.PREPROCESS.window_size = 10
+cfg.MODEL.PREPROCESS.input_dim=96
+cfg.MODEL.PREPROCESS.hidden_dim=768
+
 # MODEL.BACKBONE
 cfg.MODEL.BACKBONE = edict()
 cfg.MODEL.BACKBONE.type = "DINOv2"

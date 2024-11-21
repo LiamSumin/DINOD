@@ -20,16 +20,16 @@ def parse_arguments():
 
     parser.add_argument("--config", type=str, required=True, help="Config for training or inference.")
     parser.add_argument("--resume", type=str )
-    # 종료 전에 실행할 작업
     parser.add_argument("--logging", action="store_true", help="Enable logging")
+
     
     args = parser.parse_args()
     
     return args
 
 if __name__ =="__main__":
-    dist.init_distributed()
     args = parse_arguments()
+    dist.init_distributed()
 
     config_module = importlib.import_module("lib.config.dinod.config")
     config_module.update_config_from_file(args.config)
