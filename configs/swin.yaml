@@ -12,7 +12,7 @@ COMMON :
 RUNTIME:
     sync_bn: True
     find_unused_parameters: True
-    output_dir: evaluation/feat_630
+    output_dir: evaluation/swin
     use_ema: True
     use_amp: False
 
@@ -38,6 +38,7 @@ MODEL:
       window_size: 10
       input_dim: 96
       hidden_dim: 384
+      reduction: 4
 
 # MODEL.BACKBONE
     BACKBONE:
@@ -55,12 +56,12 @@ MODEL:
             feat_strides: [8]
             hidden_dim: 384
             num_levels: 1
-            num_queries: 80
+            num_queries: 300
             num_decoder_layers: 6
             num_denoising: 100
 
             eval_idx: -1
-            eval_spatial_size: [10, 10]
+            eval_spatial_size: [40, 40]
 
 # MODEL.CRITERION
     CRITERION:
@@ -76,7 +77,7 @@ MODEL:
 
 # MODEL.POSTPROCESS
     POSTPROCESS:
-        num_top_queries: 80
+        num_top_queries: 300
         remap_mscoco_category: True
 
 # OPTIMIZER

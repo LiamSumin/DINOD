@@ -38,8 +38,7 @@ def build_preprocessing(preprocess_config):
         H_prime = W_prime = preprocess_config.img_size // preprocess_nn.patch_size
         preprocessing_to_backbone_embedding = SwinToDINOEmbedding(input_dim=preprocess_config.input_dim,
                                                            hidden_dim= preprocess_config.hidden_dim,
-                                                           H=H_prime,
-                                                           W=W_prime)
+                                                                  reduction=preprocess_config.reduction)
 
     else :
         raise NotImplementedError(f"The preprocessing method {preprocess_type} is not implemented.")

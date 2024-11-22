@@ -43,6 +43,7 @@ cfg.MODEL.PREPROCESS.img_size = 640
 cfg.MODEL.PREPROCESS.window_size = 10
 cfg.MODEL.PREPROCESS.input_dim=96
 cfg.MODEL.PREPROCESS.hidden_dim=768
+cfg.MODEL.PREPROCESS.reduction=4
 
 # MODEL.BACKBONE
 cfg.MODEL.BACKBONE = edict()

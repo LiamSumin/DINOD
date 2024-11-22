@@ -534,24 +534,37 @@ class SwinV2FirstStage(nn.Module):
         x = self.norm(x)
         return x
 
-class SwinToDINOEmbedding(nn.Module):
-    def __init__(self, input_dim=96, hidden_dim=768, patch_size=16, H=160, W=160):
+class TokenMerging(nn.Module):
+    def __init__(self, input_dim, reduction=2):
         super().__init__()
-        self.patch_size = patch_size
-        self.proj = nn.Linear(input_dim * patch_size * patch_size, hidden_dim)
-        self.H= H
-        self.W= W
+        self.reduction = reduction
+        self.norm = nn.LayerNorm(input_dim)
+        self.proj = nn.Linear(input_dim * reduction * reduction, input_dim)
 
     def forward(self, x):
-        B, L, C = x.shape
-        x = x.view(B, self.H, self.W, C)
-        P = self.patch_size
-        x = x.permute(0, 3, 1, 2)  # (B, C, H, W)
-        x = x.unfold(2, P, P).unfold(3, P, P)  # 패치 분할
-        x = x.contiguous().view(B, -1, C * P * P)
+        B, N, C = x.shape
+        H = W = int(N ** 0.5)
+        assert H % self.reduction == 0 and W % self.reduction == 0, "Reduction factor must divide H and W evenly"
+
+        x = x.view(B, H, W, C)
+        x = self.norm(x)
+
+        x = x.unfold(1, self.reduction, self.reduction).unfold(2, self.reduction, self.reduction)  
+        x = x.contiguous().view(B, -1, self.reduction * self.reduction, C)
+        x = x.view(B, -1, self.reduction * self.reduction * C)
         x = self.proj(x)
         return x
 
+class SwinToDINOEmbedding(nn.Module):
+    def __init__(self, input_dim=96, hidden_dim=384, reduction=4):
+        super().__init__()
+        self.token_merging = TokenMerging(input_dim, reduction)
+        self.proj = nn.Linear(input_dim, hidden_dim)
+
+    def forward(self, x):
+        x = self.token_merging(x)  # 토큰 병합 적용
+        x = self.proj(x)  # 임베딩 차원 조정
+        return x
 
 if __name__ == "__main__":
     # 장치 설정
